@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- HomeScreen -->
+    <string name="nav_home">Главная</string>
+    <string name="turn_proxy_title">Free Turn</string>
+    <string name="info_desc">Информация</string>
+    <string name="proxy_active">Прокси активен</string>
+    <string name="proxy_connecting">Подключение…</string>
+    <string name="proxy_press_to_start">Нажмите для запуска</string>
+    <string name="proxy_captcha_required">Требуется прохождение капчи</string>
+    <string name="current_settings">Текущие настройки</string>
+    <string name="server">Сервер</string>
+    <string name="threads">Потоки</string>
+    <string name="streams_per_cred_label">Потоков на аккаунт</string>
+    <string name="tcp">TCP</string>
+    <string name="udp">UDP</string>
+    <string name="local_port">Локальный порт</string>
+    <string name="ssh_connecting">SSH: сопряжение…</string>
+    <string name="ssh_error">SSH: ошибка</string>
+    <string name="ssh_disconnected">SSH: не сопряжено</string>
+    <string name="reconnect">Повторить сопряжение</string>
+    <string name="proxy_active_stop">Прокси активен — нажмите для остановки</string>
+    <string name="proxy_error_restart">Ошибка — нажмите для повторного запуска</string>
+    <string name="start_proxy">Запустить прокси</string>
+    <string name="connection">Соединение</string>
+    <string name="not_connected">Не сопряжено</string>
+    <string name="connected_format">Сопряжено: %1$s</string>
+    <string name="error_format_short">Ошибка: %1$s</string>
+    <string name="change">Изменить</string>
+    <string name="configure">Настроить</string>
+    <string name="android_client">Android-клиент</string>
+    <string name="proxy_core">Прокси-ядро</string>
+    <string name="btn_open">Открыть</string>
+    <string name="reset_settings">Сбросить настройки</string>
+    <string name="reset">Сбросить</string>
+    <string name="reset_all_settings_title">Сбросить все настройки?</string>
+    <string name="reset_all_settings_desc">Все настройки будут удалены, прокси остановлен. Приложение перезапустится.</string>
+    <string name="cancel">Отмена</string>
+
+    <string name="tunnel_mode_title">Режим</string>
+    <string name="tunnel_mode_local_proxy">Локальный прокси</string>
+    <string name="tunnel_mode_full_tunnel">Полный туннель</string>
+    <string name="local_proxy_status_format">Локальный прокси: %1$s</string>
+    <string name="full_tunnel_status_format">Полный туннель: %1$s</string>
+    <string name="full_tunnel_disabled">выключен</string>
+    <string name="full_tunnel_waiting_proxy">ожидает первый поток</string>
+    <string name="full_tunnel_starting">запускается</string>
+    <string name="full_tunnel_running">запущен</string>
+    <string name="full_tunnel_client_uri_label">Ссылка клиента для полного туннеля</string>
+    <string name="full_tunnel_client_uri_placeholder">vless://...@127.0.0.1:9000?...</string>
+    <string name="full_tunnel_client_uri_support">Используется только в режиме полного туннеля. Укажите локальный endpoint vk-turn-proxy без изменения SNI/TLS/obfs параметров.</string>
+
+    <!-- ClientSetupScreen -->
+    <string name="client_title">Клиент</string>
+    <string name="connection_title">Подключение</string>
+    <string name="server_address_label">Адрес turn-proxy сервера</string>
+    <string name="server_address_placeholder">1.2.3.4:56000</string>
+    <string name="server_address_support">IP и порт turn-proxy на вашем VPS</string>
+    <string name="call_link_label">Ссылка на звонок</string>
+    <string name="call_link_placeholder">https://site.ru/call/…</string>
+    <string name="call_link_support">Звонки → Создать → Скопировать ссылку (не нажимайте «Завершить»)</string>
+    <string name="local_listen_address">Локальный адрес прослушивания</string>
+    <string name="local_listen_placeholder">127.0.0.1:9000</string>
+    <string name="local_listen_support">Адрес, на котором клиент принимает трафик от WireGuard/Hysteria</string>
+    <string name="parameters_title">Параметры</string>
+    <string name="threads_format">Потоки: %1$d</string>
+    <string name="threads_recommendation">Рекомендуется 4–8</string>
+    <string name="streams_per_cred_recommendation">Сколько TURN-потоков обслуживает один VK-аккаунт. По умолчанию 10.</string>
+    <string name="streams_per_cred_format">Потоков на аккаунт: %1$d</string>
+
+    <string name="client_vless_bond">VLESS bonding</string>
+    <string name="client_vless_bond_desc">Должен совпадать с настройкой сервера. Только для VLESS-режима.</string>
+    <string name="client_wrap_enabled">WRAP-обфускация</string>
+    <string name="client_wrap_desc">Должна совпадать с настройкой сервера. Ключ берётся с сервера.</string>
+    <string name="locked_disconnect_hint">Подключитесь к серверу, чтобы изменить</string>
+    <string name="wrap_key_empty_hint">Ключ не сгенерирован — нажмите кнопку ниже</string>
+    <string name="wrap_key_invalid_hint">Неверный формат — нужны 64 hex-символа</string>
+    <string name="wrap_key_apply">Применить</string>
+    <string name="client_kcp_fec">KCP FEC (Reed-Solomon 10:3)</string>
+    <string name="client_kcp_fec_desc">Упреждающая коррекция ошибок поверх KCP. Снижает retransmit-ы при случайных потерях, добавляет ~30% overhead. Должна совпадать на клиенте и сервере.</string>
+    <string name="server_wrap_regen_in_progress">Генерация ключа…</string>
+    <string name="server_sync_section">Синхронные настройки сервера</string>
+    <string name="sync_server_switches">Синхронизировать с сервером</string>
+    <string name="sync_server_switches_desc">При выкл. флаги VLESS/bond/WRAP меняются только у клиента, серверный процесс не перезапускается</string>
+    <string name="sync_off_banner">Sync с сервером выключен. Клиентские флаги VLESS/bond/WRAP сервер не получает — следите за совпадением вручную.</string>
+    <string name="server_journal_title">Журнал</string>
+    <string name="server_journal_fetch">Показать журнал</string>
+    <string name="server_journal_refresh">Обновить</string>
+    <string name="server_journal_loading">Загрузка журнала…</string>
+    <string name="server_journal_empty">Журнал пуст</string>
+    <string name="server_journal_clear">Очистить</string>
+    <string name="transport_protocol">Транспорт</string>
+    <string name="transport_protocol_desc">UDP снижает задержки, TCP — стабильнее</string>
+    <string name="manual_captcha">Ручной ввод капчи</string>
+    <string name="manual_captcha_desc">Решать капчу вручную вместо автоматического распознавания</string>
+    <string name="use_carrier_dns">DNS оператора связи</string>
+    <string name="use_carrier_dns_desc">Использовать DNS текущей сети вместо системного резолвера</string>
+    <string name="dns_mode_title">DNS-резолвер</string>
+    <string name="dns_mode_desc">Авто — пробует системный DNS, переключается на DNS-over-HTTPS при блокировке</string>
+    <string name="dns_mode_auto">Авто</string>
+    <string name="dns_mode_udp">UDP/53</string>
+    <string name="dns_mode_doh">DoH</string>
+    <string name="force_port_443">TURN на порту 443</string>
+    <string name="force_port_443_desc">Помогает, если оператор режет нестандартные порты</string>
+    <string name="finish_setup">Завершить настройку</string>
+
+    <!-- LogsScreen -->
+    <string name="logs_title">Логи</string>
+    <string name="copy">Копировать</string>
+    <string name="clear">Очистить</string>
+    <string name="no_logs">Нет логов</string>
+
+    <!-- ServerManagementScreen -->
+    <string name="server_status">Статус сервера</string>
+    <string name="ssh_connection">SSH‑соединение</string>
+    <string name="vk_turn_proxy">vk‑turn‑proxy</string>
+    <string name="error_format">Ошибка: %1$s</string>
+    <string name="server_config">Конфигурация сервера</string>
+    <string name="listen_port">Порт прослушивания</string>
+    <string name="listen_port_placeholder">56000</string>
+    <string name="listen_port_desc">Порт, на котором сервер принимает подключения от клиентов</string>
+    <string name="listen_ip">IP прослушивания</string>
+    <string name="listen_ip_placeholder">0.0.0.0</string>
+    <string name="listen_ip_desc">IP-адрес, к которому биндится сервер. 0.0.0.0 — все интерфейсы. Укажите конкретный WAN IP, если на хосте несколько адресов.</string>
+    <string name="turn_client_address">Адрес TURN‑клиента</string>
+    <string name="turn_client_placeholder">127.0.0.1:40537</string>
+    <string name="turn_client_desc">Локальный WireGuard/Hysteria-клиент на стороне сервера</string>
+    <string name="install">Установить / обновить</string>
+    <string name="server_install_cached">Актуально</string>
+    <string name="server_install_downloaded">Обновлено</string>
+    <string name="server_version_label">Версия: %1$s</string>
+    <string name="server_vless_bond">VLESS bonding</string>
+    <string name="server_vless_bond_desc">Объединение нескольких VLESS-сессий в один туннель</string>
+    <string name="server_wrap_enabled">WRAP-обфускация</string>
+    <string name="server_wrap_desc">Маскирует DTLS-трафик ChaCha20-XOR (одинаковый ключ на сервере и клиенте)</string>
+    <string name="server_wrap_key_label">Wrap-ключ (64 hex)</string>
+    <string name="server_wrap_regen">Сгенерировать новый ключ на сервере</string>
+    <string name="start_server">Запустить сервер</string>
+    <string name="stop_server">Остановить сервер</string>
+    <string name="continue_client_setup">Продолжить настройку клиента</string>
+    <string name="vless_mode">VLESS-режим</string>
+    <string name="vless_mode_desc">Проброс VLESS через TURN-туннель (требует -vless на сервере)</string>
+    <string name="server_running_vless">Сервер запущен в VLESS-режиме</string>
+    <string name="ssh_log_title">SSH-лог</string>
+    <string name="active">Активно</string>
+    <string name="inactive">Неактивно</string>
+    <string name="paired">Сопряжено</string>
+
+    <!-- SshSetupScreen -->
+    <string name="show_password">Показать пароль</string>
+    <string name="hide_password">Скрыть пароль</string>
+    <string name="connect_to_server">Сопряжение с сервером</string>
+    <string name="back">Назад</string>
+    <string name="server_data">Данные сервера</string>
+    <string name="server_ip_label">IP-адрес сервера</string>
+    <string name="server_ip_placeholder">1.2.3.4</string>
+    <string name="ssh_port">SSH порт</string>
+    <string name="username">Имя пользователя</string>
+    <string name="password">Пароль</string>
+    <string name="private_key">Приватный ключ</string>
+    <string name="authentication">Аутентификация</string>
+    <string name="private_key_pem">Приватный ключ (PEM)</string>
+    <string name="private_key_placeholder">-----BEGIN RSA PRIVATE KEY-----\n…</string>
+    <string name="connect_btn">Подключиться</string>
+    <string name="step_connecting">Сопряжение с сервером…</string>
+    <string name="step_auth">Аутентификация…</string>
+    <string name="step_ssh_check">Проверка SSH…</string>
+
+    <!-- OnboardingScreen -->
+    <string name="onboarding_title">Free Turn</string>
+    <string name="onboarding_subtitle">Проксируйте WireGuard и Hysteria‑трафик\nчерез TURN‑серверы VK Calls</string>
+    <string name="privacy_notice">Мы не собираем никаких данных. Все настройки (SSH-доступ, параметры прокси) хранятся исключительно на вашем устройстве.</string>
+    <string name="setup_server">Настроить сервер</string>
+    <string name="skip_setup">Пропустить настройки</string>
+
+    <!-- Update -->
+    <string name="update_title">Обновление</string>
+    <string name="update_check">Проверить</string>
+    <string name="update_tap_to_check">Нажмите для проверки</string>
+    <string name="update_checking">Проверка…</string>
+    <string name="update_available_title">Доступно обновление</string>
+    <string name="update_available">Доступна версия %1$s</string>
+    <string name="update_download">Скачать</string>
+    <string name="update_downloading_title">Загрузка обновления</string>
+    <string name="update_downloading">Загрузка: %1$d%%</string>
+    <string name="update_ready_title">Обновление загружено</string>
+    <string name="update_ready_desc">APK готов к установке. Установить сейчас?</string>
+    <string name="update_ready_desc_short">Готово к установке</string>
+    <string name="update_install">Установить</string>
+    <string name="update_no_update">Установлена последняя версия</string>
+    <string name="update_error">Ошибка: %1$s</string>
+
+    <string name="debug_mode">Debug-режим</string>
+    <string name="debug_mode_desc">Расширенный вывод в логах</string>
+    <string name="magic_switch">Альтернативный TURN-узел</string>
+    <string name="magic_switch_desc">Принудительно использовать указанный TURN-сервер вместо автоподбора. Помогает при блокировке стандартных адресов.</string>
+    <string name="magic_switch_address_label">Адрес TURN-узла</string>
+    <string name="magic_switch_address_placeholder">255.255.255.255</string>
+    <string name="magic_switch_address_support">IP или хост альтернативного TURN-сервера</string>
+
+    <string name="dynamic_theme_title">Динамическая тема</string>
+    <string name="dynamic_theme_desc">Использовать системные цвета (Material You)</string>
+    <string name="privacy_mode_title">Приватный режим</string>
+    <string name="privacy_mode_desc">Скрывает IP и порты</string>
+
+    <!-- Notifications -->
+    <string name="notif_proxy_title">FreeTurn</string>
+    <string name="notif_proxy_connecting">Подключение…</string>
+    <string name="notif_channel_proxy">Прокси</string>
+    <string name="notif_channel_captcha">Капча</string>
+    <string name="notif_captcha_title">Требуется прохождение капчи</string>
+    <string name="notif_captcha_text">Откройте приложение для проверки</string>
+
+    <!-- CaptchaWebViewDialog -->
+    <string name="captcha_title">Проверка VK</string>
+    <string name="captcha_subtitle">Пройдите проверку для продолжения</string>
+    <string name="captcha_close">Закрыть</string>
+
+    <!-- Telegram -->
+    <string name="tg_channel">Telegram-канал</string>
+    <string name="tg_subscribe_title">Следите за обновлениями</string>
+    <string name="tg_subscribe_desc">Подпишитесь на Telegram-канал, чтобы узнавать о новых версиях и изменениях первыми.</string>
+    <string name="tg_subscribe_btn">Подписаться</string>
+    <string name="tg_not_now">Не сейчас</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">Профили</string>
+    <string name="profiles_empty_title">Пока нет сохранённых профилей</string>
+    <string name="profiles_empty_desc">Сохраните текущие настройки как профиль или импортируйте ссылку, чтобы переключаться между разными профилями.</string>
+    <string name="profile_save_current">Сохранить текущие настройки</string>
+    <string name="profile_save_dialog_title">Новый профиль</string>
+    <string name="profile_name_label">Название профиля</string>
+    <string name="profile_name_placeholder">Например, «Мой VPS»</string>
+    <string name="profile_save">Сохранить</string>
+    <string name="profile_active">Активен</string>
+    <string name="profile_rename">Переименовать</string>
+    <string name="profile_delete">Удалить</string>
+    <string name="profile_delete_title">Удалить профиль?</string>
+    <string name="profile_delete_desc">Профиль «%1$s» будет удалён. Это действие нельзя отменить.</string>
+    <string name="profile_switcher_title">Профиль</string>
+    <string name="profile_manage">Управлять профилями</string>
+    <string name="nav_profiles">Профили</string>
+    <string name="profile_actions_title">Профили</string>
+    <string name="profile_active_label">Активный профиль</string>
+    <string name="profile_switch_action">Сменить</string>
+    <string name="profile_save_current_hint">Создаст новый профиль с текущими SSH и клиентскими настройками</string>
+    <string name="profile_more">Ещё</string>
+    <string name="profile_default_name">Новый профиль</string>
+    <string name="profile_section_saved">Сохранённые профили</string>
+    <string name="profile_close">Закрыть</string>
+    <string name="profile_name_taken">Профиль с таким именем уже существует</string>
+    <string name="profile_unsaved_label">Несохранённая конфигурация</string>
+    <string name="profile_update_current">Обновить активный профиль</string>
+    <string name="profile_update_current_hint">Перезаписать текущими настройками</string>
+    <string name="profile_updated_toast">Профиль обновлён</string>
+</resources>

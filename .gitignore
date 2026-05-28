@@ -1,0 +1,25 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+.codex-downloads/
+.kotlin/
+dist/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Build outputs
+**/build/
+**/release/
+
+# Claude Code
+.claude/

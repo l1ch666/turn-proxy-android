@@ -1,0 +1,16 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.FreeTurn" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    </style>
+
+    <style name="Theme.FreeTurn" parent="Base.Theme.FreeTurn" />
+
+    <!-- Splash screen theme (Core Splash Screen API) -->
+    <style name="Theme.FreeTurn.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#FF415F91</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.FreeTurn</item>
+    </style>
+</resources>
