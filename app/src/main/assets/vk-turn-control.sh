@@ -21,7 +21,7 @@ ENVFILE="$PREFIX/run.env"
 LAUNCHER="$PREFIX/launch.sh"
 UNIT_PATH="/etc/systemd/system/vk-turn-proxy.service"
 UNIT_NAME="vk-turn-proxy.service"
-BASE_URL="https://github.com/samosvalishe/vk-turn-proxy/releases/latest/download"
+BASE_URL="https://github.com/l1ch666/vk-turn-proxy/releases/latest/download"
 
 log()  { echo "LOG: $*"; }
 emit() { echo "$1=$2"; }
@@ -60,6 +60,11 @@ detect_arch() {
 }
 
 binpath() { echo "$PREFIX/$(detect_arch)"; }
+
+binary_supports_flag() {
+    local bin="$1" flag="$2"
+    "$bin" -h 2>&1 | grep -q -- "$flag"
+}
 
 # Доступен ли systemd на этой машине.
 has_systemd() {
@@ -506,6 +511,17 @@ cmd_start() {
     parse_args "$@"
     [ -n "$ARG_LISTEN" ]  || die "--listen required"
     [ -n "$ARG_CONNECT" ] || die "--connect required"
+    if [ -n "$ARG_VLESS_BOND" ] && [ -z "$ARG_VLESS" ]; then
+        die "--vless-bond requires --vless"
+    fi
+    if [ -n "$ARG_VLESS_BOND" ]; then
+        local bin
+        bin=$(binpath)
+        [ -x "$bin" ] || die "server binary not installed; run install first"
+        if ! binary_supports_flag "$bin" "-vless-bond"; then
+            die "Installed server binary does not support -vless-bond. Please update server."
+        fi
+    fi
     case "$(current_runtime)" in
         systemd) cmd_start_systemd ;;
         nohup)   cmd_start_nohup ;;

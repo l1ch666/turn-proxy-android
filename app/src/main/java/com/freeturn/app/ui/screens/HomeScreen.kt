@@ -89,6 +89,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import com.freeturn.app.tunnel.ClientTransportResolver
 import com.freeturn.app.tunnel.FullTunnelUriValidator
 import com.freeturn.app.tunnel.FullTunnelState
 import com.freeturn.app.tunnel.TunnelMode
@@ -113,6 +114,7 @@ fun HomeScreen(
     val sshState by viewModel.sshState.collectAsStateWithLifecycle()
     val sshConfig by viewModel.sshConfig.collectAsStateWithLifecycle()
     val clientConfig by viewModel.clientConfig.collectAsStateWithLifecycle()
+    val transportFlags = ClientTransportResolver.resolve(clientConfig, serverVlessBond = false)
     val fullTunnelState by viewModel.fullTunnelState.collectAsStateWithLifecycle()
     val isConfigured = sshConfig.ip.isNotBlank()
 
@@ -331,10 +333,19 @@ fun HomeScreen(
                         ConfigRow(stringResource(R.string.streams_per_cred_label), "${clientConfig.streamsPerCred}")
                         ConfigRow(
                             stringResource(R.string.transport_protocol),
-                            if (clientConfig.vlessMode) "VLESS"
+                            if (transportFlags.vlessMode) "VLESS"
                             else if (clientConfig.useUdp) stringResource(R.string.udp)
                             else stringResource(R.string.tcp)
                         )
+                        if (transportFlags.vlessMode) {
+                            ConfigRow(
+                                stringResource(R.string.client_vless_bond),
+                                if (transportFlags.vlessBond)
+                                    stringResource(R.string.active)
+                                else
+                                    stringResource(R.string.inactive)
+                            )
+                        }
                         ConfigRow(stringResource(R.string.local_port), clientConfig.localPort.redact(privacyMode))
                         if (clientConfig.tunnelMode == TunnelMode.FULL_TUNNEL) {
                             ConfigRow(

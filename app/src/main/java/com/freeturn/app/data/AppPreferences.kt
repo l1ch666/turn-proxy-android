@@ -50,6 +50,7 @@ data class ClientConfig(
     val isRawMode: Boolean = false,
     val rawCommand: String = "",
     val vlessMode: Boolean = false,
+    val enableVlessBond: Boolean = false,
 
     // Если true — добавляется флаг -debug для расширенного вывода в логах.
     val debugMode: Boolean = false,
@@ -94,6 +95,7 @@ class AppPreferences(context: Context) {
         val CLIENT_IS_RAW = booleanPreferencesKey("client_is_raw")
         val CLIENT_RAW_CMD = stringPreferencesKey("client_raw_cmd")
         val CLIENT_VLESS = booleanPreferencesKey("client_vless")
+        val CLIENT_VLESS_BOND = booleanPreferencesKey("client_vless_bond")
         private val CLIENT_CAPTCHA_SOLVER_LEGACY = stringPreferencesKey("client_captcha_solver")
         val CLIENT_DEBUG = booleanPreferencesKey("client_debug")
         val CLIENT_USE_CARRIER_DNS = booleanPreferencesKey("client_use_carrier_dns")
@@ -177,6 +179,7 @@ class AppPreferences(context: Context) {
                 isRawMode = prefs[CLIENT_IS_RAW] ?: false,
                 rawCommand = prefs[CLIENT_RAW_CMD] ?: "",
                 vlessMode = prefs[CLIENT_VLESS] ?: false,
+                enableVlessBond = prefs[CLIENT_VLESS_BOND] ?: false,
 
                 debugMode = prefs[CLIENT_DEBUG] ?: false,
                 useCarrierDns = prefs[CLIENT_USE_CARRIER_DNS] ?: false,
@@ -309,6 +312,7 @@ class AppPreferences(context: Context) {
             prefs[CLIENT_IS_RAW] = config.isRawMode
             prefs[CLIENT_RAW_CMD] = config.rawCommand
             prefs[CLIENT_VLESS] = config.vlessMode
+            prefs[CLIENT_VLESS_BOND] = config.enableVlessBond
             prefs.remove(CLIENT_CAPTCHA_SOLVER_LEGACY)
             prefs[CLIENT_DEBUG] = config.debugMode
             prefs[CLIENT_USE_CARRIER_DNS] = config.useCarrierDns

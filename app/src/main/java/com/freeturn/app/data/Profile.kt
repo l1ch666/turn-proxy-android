@@ -69,6 +69,7 @@ internal object ProfileJson {
             put("isRawMode", p.client.isRawMode)
             put("rawCommand", p.client.rawCommand)
             put("vlessMode", p.client.vlessMode)
+            put("enableVlessBond", p.client.enableVlessBond)
 
             put("debugMode", p.client.debugMode)
             put("useCarrierDns", p.client.useCarrierDns)
@@ -117,6 +118,7 @@ internal object ProfileJson {
                 isRawMode = cliO.optBoolean("isRawMode", false),
                 rawCommand = cliO.optString("rawCommand"),
                 vlessMode = cliO.optBoolean("vlessMode", false),
+                enableVlessBond = cliO.optBoolean("enableVlessBond", false),
 
                 debugMode = cliO.optBoolean("debugMode", false),
                 useCarrierDns = cliO.optBoolean("useCarrierDns", false),

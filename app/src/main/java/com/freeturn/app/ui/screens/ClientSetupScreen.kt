@@ -54,6 +54,7 @@ import com.freeturn.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.freeturn.app.data.ClientConfig
 import com.freeturn.app.data.DnsMode
+import com.freeturn.app.tunnel.ClientTransportResolver
 import com.freeturn.app.tunnel.FullTunnelUriValidator
 import com.freeturn.app.tunnel.TunnelMode
 import com.freeturn.app.ui.HapticUtil
@@ -88,8 +89,9 @@ fun ClientSetupScreen(
     // (если запущен), иначе сохранённое. В !sync режиме — всегда сохранённое:
     // серверная и клиентская стороны могут различаться, и UI отражает клиента.
     val syncOn = saved.syncServerSwitches
-    val effectiveVlessMode = if (syncOn) serverKnown?.vlessMode ?: saved.vlessMode else saved.vlessMode
-    val effectiveVlessBond = if (syncOn) serverKnown?.vlessBond ?: serverOpts.vlessBond else serverOpts.vlessBond
+    val savedTransport = ClientTransportResolver.resolve(saved, serverVlessBond = serverOpts.vlessBond)
+    val effectiveVlessMode = if (syncOn) serverKnown?.vlessMode ?: savedTransport.vlessMode else savedTransport.vlessMode
+    val effectiveVlessBond = if (syncOn) serverKnown?.vlessBond ?: savedTransport.vlessBond else savedTransport.vlessBond
     val effectiveWrap      = if (syncOn) serverKnown?.wrap      ?: serverOpts.wrapEnabled else serverOpts.wrapEnabled
 
     val context = LocalContext.current
@@ -107,6 +109,9 @@ fun ClientSetupScreen(
     var tunnelMode by rememberSaveable(saved.tunnelMode) { mutableStateOf(saved.tunnelMode) }
     var fullTunnelClientUri by rememberSaveable(saved.fullTunnelClientUri) {
         mutableStateOf(saved.fullTunnelClientUri)
+    }
+    var enableVlessBond by rememberSaveable(saved.enableVlessBond) {
+        mutableStateOf(saved.enableVlessBond)
     }
 
     var debugMode by rememberSaveable(saved.debugMode) { mutableStateOf(saved.debugMode) }
@@ -133,7 +138,7 @@ fun ClientSetupScreen(
         }
     }
 
-    LaunchedEffect(serverAddress, vkLink, threads, streamsPerCred, useUdp, manualCaptcha, useCarrierDns, localPort, dnsMode, forcePort443, debugMode, magicSwitch, magicTurn, tunnelMode, fullTunnelClientUri) {
+    LaunchedEffect(serverAddress, vkLink, threads, streamsPerCred, useUdp, manualCaptcha, useCarrierDns, localPort, dnsMode, forcePort443, debugMode, magicSwitch, magicTurn, tunnelMode, fullTunnelClientUri, enableVlessBond) {
         delay(600)
         viewModel.saveClientConfig(
             ClientConfig(
@@ -145,6 +150,7 @@ fun ClientSetupScreen(
                 manualCaptcha = manualCaptcha,
                 localPort     = localPort.trim(),
                 vlessMode     = saved.vlessMode,
+                enableVlessBond = enableVlessBond,
 
                 debugMode     = debugMode,
                 useCarrierDns = useCarrierDns,
@@ -510,6 +516,7 @@ fun ClientSetupScreen(
                     enabled = controlsEnabled && effectiveVlessMode,
                     onCheckedChange = {
                         HapticUtil.perform(context, if (it) HapticUtil.Pattern.TOGGLE_ON else HapticUtil.Pattern.TOGGLE_OFF)
+                        enableVlessBond = it
                         viewModel.setServerVlessBond(it)
                     }
                 )

@@ -19,7 +19,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.freeturn.app.data.AppPreferences
 import com.freeturn.app.data.DnsMode
+import com.freeturn.app.domain.ClientCommandBuilder
 import com.freeturn.app.domain.server.KCP_FEC_VALUE
+import com.freeturn.app.tunnel.ClientTransportResolver
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -165,6 +167,7 @@ class ProxyService : Service() {
         // должны передаваться и клиенту с тем же ключом, иначе DTLS-handshake
         // не сойдётся. Источник истины — общий serverOpts.
         val srv = prefs.serverOptsFlow.first()
+        val transport = ClientTransportResolver.resolve(cfg, serverVlessBond = srv.vlessBond)
 
         val executable = "${applicationInfo.nativeLibraryDir}/libvkturn.so"
 
@@ -186,10 +189,10 @@ class ProxyService : Service() {
             if (cfg.streamsPerCred > 0 && cfg.streamsPerCred != 10) {
                 cmdArgs.add("-streams-per-cred"); cmdArgs.add(cfg.streamsPerCred.toString())
             }
-            if (cfg.vlessMode) cmdArgs.add("-vless")
+            if (transport.vlessMode) cmdArgs.add("-vless")
             else if (cfg.useUdp) cmdArgs.add("-udp")
             // VLESS bonding имеет смысл только в VLESS-режиме.
-            if (cfg.vlessMode && srv.vlessBond) cmdArgs.add("-vless-bond")
+            if (transport.vlessBond) cmdArgs.add("-vless-bond")
             // WRAP: тот же ключ, что и у сервера (хранится в EncryptedSharedPreferences).
             // Без 64-hex ключа флаг не передаём — ядро упадёт.
             if (srv.wrapEnabled &&
@@ -243,7 +246,7 @@ class ProxyService : Service() {
         val nonVlessTotal = if (cfg.isRawMode) 0 else if (cfg.threads > 0) cfg.threads else 1
         var vlessActive = 0
         var vlessTotal = 0
-        var isVless = cfg.vlessMode
+        var isVless = if (cfg.isRawMode) cfg.vlessMode else transport.vlessMode
 
         fun publishStats() {
             val stats = if (isVless) {
@@ -256,7 +259,7 @@ class ProxyService : Service() {
         // Сброс на старте сессии (в том числе на watchdog-рестарте).
         publishStats()
         try {
-            ProxyServiceState.addLog("Команда: ${cmdArgs.joinToString(" ")}")
+            ProxyServiceState.addLog("Команда: ${ClientCommandBuilder.sanitizeForLogs(cmdArgs)}")
 
             val proc = withContext(Dispatchers.IO) {
                 val pb = ProcessBuilder(cmdArgs).redirectErrorStream(true)
@@ -298,7 +301,7 @@ class ProxyService : Service() {
                         null
                     }
                     if (line == null) break
-                    val l = line ?: continue
+                    val l = line
                     ProxyServiceState.addLog(l)
 
                     // Детекция URL ручной капчи. Каждый раз выдаём новый sessionId,

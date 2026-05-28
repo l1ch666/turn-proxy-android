@@ -70,7 +70,7 @@
     <string name="streams_per_cred_format">Потоков на аккаунт: %1$d</string>
 
     <string name="client_vless_bond">VLESS bonding</string>
-    <string name="client_vless_bond_desc">Должен совпадать с настройкой сервера. Только для VLESS-режима.</string>
+    <string name="client_vless_bond_desc">VLESS only: distribute full-tunnel TCP connections across the active TURN stream pool. The server must run with -vless -vless-bond.</string>
     <string name="client_wrap_enabled">WRAP-обфускация</string>
     <string name="client_wrap_desc">Должна совпадать с настройкой сервера. Ключ берётся с сервера.</string>
     <string name="locked_disconnect_hint">Подключитесь к серверу, чтобы изменить</string>

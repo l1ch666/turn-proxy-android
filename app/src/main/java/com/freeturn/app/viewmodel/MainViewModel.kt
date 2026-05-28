@@ -16,6 +16,7 @@ import com.freeturn.app.domain.AppUpdater
 import com.freeturn.app.domain.LocalProxyManager
 import com.freeturn.app.domain.SshRepository
 import com.freeturn.app.tunnel.FullTunnelState
+import com.freeturn.app.tunnel.ClientTransportResolver
 import com.freeturn.app.tunnel.SingBoxFullTunnelEngine
 import com.freeturn.app.tunnel.TunnelSupervisor
 import com.freeturn.app.ui.HapticUtil
@@ -377,14 +378,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             sshRepository.updateServerState(ServerState.Error("Неверный формат адреса (ожидается host:port)"))
             return
         }
-        val vless = clientConfig.value.vlessMode
         val opts = serverOpts.value
+        val transport = ClientTransportResolver.resolve(clientConfig.value, opts.vlessBond)
         val wrapKey = if (opts.wrapEnabled) opts.wrapKey else ""
         viewModelScope.launch {
             sshRepository.startServer(
                 listen = l, connect = c,
-                vlessMode = vless,
-                vlessBond = opts.vlessBond,
+                vlessMode = transport.vlessMode,
+                vlessBond = transport.vlessBond,
                 wrapKey = wrapKey,
                 kcpFec = opts.kcpFec
             )
@@ -415,13 +416,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setServerVlessBond(enabled: Boolean) {
         viewModelScope.launch {
             val current = prefs.serverOptsFlow.first()
+            val client = prefs.clientConfigFlow.first()
             val known = serverState.value as? ServerState.Known
             val storedMatches = current.vlessBond == enabled
+            val clientMatches = client.enableVlessBond == enabled
             val effectiveMatches = known?.vlessBond?.let { it == enabled } ?: true
-            if (storedMatches && effectiveMatches) return@launch
+            if (storedMatches && clientMatches && effectiveMatches) return@launch
             val next = current.copy(vlessBond = enabled)
+            val nextClient = client.copy(enableVlessBond = enabled)
             if (!storedMatches) {
-                profileMutex.withLock { prefs.saveServerOpts(next) }
+                profileMutex.withLock {
+                    prefs.saveServerOpts(next)
+                    prefs.saveClientConfig(nextClient)
+                }
+            } else if (!clientMatches) {
+                profileMutex.withLock { prefs.saveClientConfig(nextClient) }
             }
             if (clientConfig.value.syncServerSwitches) restartServerIfRunning()
             restartProxyIfRunning()
@@ -512,12 +521,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!l.matches(Regex("""^[\w.\-]+:\d{1,5}$""")) ||
             !c.matches(Regex("""^[\w.\-]+:\d{1,5}$"""))) return
         val opts = prefs.serverOptsFlow.first()
-        val vless = clientConfig.value.vlessMode
+        val client = clientConfig.value
+        val transport = ClientTransportResolver.resolve(client, opts.vlessBond)
         sshRepository.stopServer()
         sshRepository.startServer(
             listen = l, connect = c,
-            vlessMode = vless,
-            vlessBond = opts.vlessBond,
+            vlessMode = transport.vlessMode,
+            vlessBond = transport.vlessBond,
             wrapKey = if (opts.wrapEnabled) opts.wrapKey else "",
             kcpFec = opts.kcpFec
         )

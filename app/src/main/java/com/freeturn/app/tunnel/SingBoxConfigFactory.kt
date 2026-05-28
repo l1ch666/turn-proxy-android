@@ -39,12 +39,12 @@ object SingBoxConfigFactory {
             .put("type", "tun")
             .put("tag", "tun-in")
             .put("interface_name", "freeturn0")
-            .put("inet4_address", JSONArray().put("172.19.0.1/30"))
-            .put("inet6_address", JSONArray().put("fdfe:dcba:9876::1/126"))
-            .put("inet4_route_address", JSONArray().put("0.0.0.0/1").put("128.0.0.0/1"))
-            .put("inet6_route_address", JSONArray().put("::/1").put("8000::/1"))
-            .put("inet4_route_exclude_address", JSONArray().put("127.0.0.0/8"))
-            .put("inet6_route_exclude_address", JSONArray().put("::1/128"))
+            .put("address", JSONArray().put("172.19.0.1/30").put("fdfe:dcba:9876::1/126"))
+            .put(
+                "route_address",
+                JSONArray().put("0.0.0.0/1").put("128.0.0.0/1").put("::/1").put("8000::/1")
+            )
+            .put("route_exclude_address", JSONArray().put("127.0.0.0/8").put("::1/128"))
             .put("mtu", 1400)
             .put("auto_route", true)
             .put("strict_route", true)

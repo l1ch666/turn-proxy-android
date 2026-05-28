@@ -28,5 +28,6 @@ class TunnelModeProfileTest {
 
         assertEquals(TunnelMode.LOCAL_PROXY, profiles.single().client.tunnelMode)
         assertEquals("", profiles.single().client.fullTunnelClientUri)
+        assertEquals(false, profiles.single().client.enableVlessBond)
     }
 }

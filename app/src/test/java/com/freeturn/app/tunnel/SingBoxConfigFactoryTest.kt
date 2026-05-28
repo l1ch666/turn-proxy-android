@@ -23,6 +23,13 @@ class SingBoxConfigFactoryTest {
         val outbound = json.getJSONArray("outbounds").getJSONObject(0)
 
         assertEquals("tun", inbound.getString("type"))
+        assertEquals("172.19.0.1/30", inbound.getJSONArray("address").getString(0))
+        assertEquals("0.0.0.0/1", inbound.getJSONArray("route_address").getString(0))
+        assertEquals("127.0.0.0/8", inbound.getJSONArray("route_exclude_address").getString(0))
+        assertEquals(false, inbound.has("inet4_address"))
+        assertEquals(false, inbound.has("inet6_address"))
+        assertEquals(false, inbound.has("inet4_route_address"))
+        assertEquals(false, inbound.has("inet6_route_address"))
         assertEquals("vless", outbound.getString("type"))
         assertEquals("127.0.0.1", outbound.getString("server"))
         assertEquals(9000, outbound.getInt("server_port"))

@@ -175,6 +175,20 @@ Full-tunnel backend встроен в APK на этапе сборки как `a
 
 ---
 
+## VLESS bonding in full tunnel
+
+For `vless://` full-tunnel links FreeTurn can pass `-vless -vless-bond` to the embedded Go client and `--vless --vless-bond` to the SSH server control script. Hysteria/Hysteria2/Hy2 links do not enable `vless-bond`.
+
+`activeConnectionCount >= 1` is only the readiness gate for starting the Android VPN. It is not a one-stream limit: the Go client keeps starting the configured `-n` VLESS sessions and adds them to the active pool as they connect. The current Go core implements connection-level bonding: new TCP connections are distributed across the active TURN/DTLS sessions; a single long-lived TCP connection is not byte-striped across multiple sessions.
+
+If the installed server binary does not advertise `-vless-bond`, the SSH control script fails early with:
+
+```text
+Installed server binary does not support -vless-bond. Please update server.
+```
+
+---
+
 ## Broadcast API
 
 Управление прокси через `adb` или Tasker:
