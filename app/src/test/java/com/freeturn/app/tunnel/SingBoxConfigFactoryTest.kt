@@ -24,18 +24,85 @@ class SingBoxConfigFactoryTest {
 
         assertEquals("tun", inbound.getString("type"))
         assertEquals("172.19.0.1/30", inbound.getJSONArray("address").getString(0))
-        assertEquals("0.0.0.0/1", inbound.getJSONArray("route_address").getString(0))
-        assertEquals("127.0.0.0/8", inbound.getJSONArray("route_exclude_address").getString(0))
+        assertEquals("0.0.0.0/2", inbound.getJSONArray("route_address").getString(0))
+        assertEquals(false, inbound.has("route_exclude_address"))
         assertEquals(false, inbound.has("inet4_address"))
         assertEquals(false, inbound.has("inet6_address"))
         assertEquals(false, inbound.has("inet4_route_address"))
         assertEquals(false, inbound.has("inet6_route_address"))
         assertEquals("vless", outbound.getString("type"))
+        assertEquals("proxy", outbound.getString("tag"))
         assertEquals("127.0.0.1", outbound.getString("server"))
         assertEquals(9000, outbound.getInt("server_port"))
         assertEquals("example.com", outbound.getJSONObject("tls").getString("server_name"))
         assertEquals("ws", outbound.getJSONObject("transport").getString("type"))
         assertEquals("/ray", outbound.getJSONObject("transport").getString("path"))
+    }
+
+    @Test
+    fun tunConfigAvoidsIpv6AddressesOnAndroid() {
+        val json = JSONObject(
+            SingBoxConfigFactory.build(
+                FullTunnelConfig(
+                    clientUri = "vless://00000000-0000-0000-0000-000000000000@127.0.0.1:9000",
+                    localProxyHost = "127.0.0.1",
+                    localProxyPort = 9000
+                )
+            )
+        )
+
+        val inbound = json.getJSONArray("inbounds").getJSONObject(0)
+        val addresses = inbound.getJSONArray("address")
+        val routes = inbound.getJSONArray("route_address")
+
+        assertEquals(1, addresses.length())
+        assertEquals("172.19.0.1/30", addresses.getString(0))
+        assertEquals(false, (0 until routes.length()).any { routes.getString(it).contains(":") })
+        assertEquals(false, inbound.has("route_exclude_address"))
+    }
+
+    @Test
+    fun tunConfigAvoidsLoopbackWithoutAndroidExcludeRoute() {
+        val json = JSONObject(
+            SingBoxConfigFactory.build(
+                FullTunnelConfig(
+                    clientUri = "vless://00000000-0000-0000-0000-000000000000@127.0.0.1:9000",
+                    localProxyHost = "127.0.0.1",
+                    localProxyPort = 9000
+                )
+            )
+        )
+
+        val inbound = json.getJSONArray("inbounds").getJSONObject(0)
+        val routes = inbound.getJSONArray("route_address")
+        val routeValues = (0 until routes.length()).map { routes.getString(it) }
+
+        assertEquals(false, inbound.has("route_exclude_address"))
+        assertEquals(true, routeValues.contains("126.0.0.0/8"))
+        assertEquals(true, routeValues.contains("128.0.0.0/1"))
+        assertEquals(false, routeValues.any { it == "0.0.0.0/1" || it.startsWith("127.") })
+    }
+
+    @Test
+    fun configTagsRouteDnsThroughProxyOutbound() {
+        val json = JSONObject(
+            SingBoxConfigFactory.build(
+                FullTunnelConfig(
+                    clientUri = "vless://00000000-0000-0000-0000-000000000000@127.0.0.1:9000?type=tcp&encryption=none",
+                    localProxyHost = "127.0.0.1",
+                    localProxyPort = 9000
+                )
+            )
+        )
+
+        val outbound = json.getJSONArray("outbounds").getJSONObject(0)
+        val dnsServer = json.getJSONObject("dns").getJSONArray("servers").getJSONObject(0)
+        val route = json.getJSONObject("route")
+
+        assertEquals("proxy", outbound.getString("tag"))
+        assertEquals("proxy", dnsServer.getString("detour"))
+        assertEquals("proxy", route.getString("final"))
+        assertEquals(false, outbound.has("transport"))
     }
 
     @Test

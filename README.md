@@ -179,13 +179,19 @@ Full-tunnel backend встроен в APK на этапе сборки как `a
 
 For `vless://` full-tunnel links FreeTurn can pass `-vless -vless-bond` to the embedded Go client and `--vless --vless-bond` to the SSH server control script. Hysteria/Hysteria2/Hy2 links do not enable `vless-bond`.
 
-`activeConnectionCount >= 1` is only the readiness gate for starting the Android VPN. It is not a one-stream limit: the Go client keeps starting the configured `-n` VLESS sessions and adds them to the active pool as they connect. The current Go core implements connection-level bonding: new TCP connections are distributed across the active TURN/DTLS sessions; a single long-lived TCP connection is not byte-striped across multiple sessions.
+`activeConnectionCount >= 1` is only the readiness gate for starting the Android VPN. It is not a one-stream limit: the Go client keeps starting the configured `-n` VLESS bond paths and adds them to the same KCP/smux transport as they connect. FreeTurn 2.6.0 bundles a Go core where `-vless-bond` is packet-level bonding, so one long-lived VLESS/full-tunnel TCP connection can use several TURN/DTLS paths instead of being pinned to one stream.
 
 If the installed server binary does not advertise `-vless-bond`, the SSH control script fails early with:
 
 ```text
 Installed server binary does not support -vless-bond. Please update server.
 ```
+
+## Embedded Go core compatibility
+
+FreeTurn 2.6.0 bundles a `libvkturn.so` that accepts all Android wrapper flags emitted by the app: `-streams-per-cred`, `-dns`, `-dns-servers`, `-wrap`, `-wrap-key`, `-gen-wrap-key`, and `-vless-bond`. This prevents saved profiles with DNS, credential-cache, or WRAP settings from crashing the local proxy with Go flag exit code `2`.
+
+The public Go core currently accepts `-wrap/-wrap-key` as compatibility flags and logs that packet wrapping is not implemented in this build. Use a WRAP-capable server/client core if real packet wrapping is required.
 
 ---
 

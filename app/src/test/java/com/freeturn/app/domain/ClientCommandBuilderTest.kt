@@ -2,6 +2,7 @@ package com.freeturn.app.domain
 
 import com.freeturn.app.data.AppPreferences
 import com.freeturn.app.data.ClientConfig
+import com.freeturn.app.data.DnsMode
 import com.freeturn.app.tunnel.TunnelMode
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -73,5 +74,27 @@ class ClientCommandBuilderTest {
 
         assertFalse(sanitized.contains("secret"))
         assertFalse(sanitized.contains("0123456789abcdef"))
+    }
+
+    @Test
+    fun androidCompatibilityFlagsAreBuiltWhenConfigured() {
+        val wrapKey = "a".repeat(64)
+        val args = ClientCommandBuilder.build(
+            executable = "/data/app/libvkturn.so",
+            cfg = ClientConfig(
+                serverAddress = "1.2.3.4:56000",
+                vkLink = "https://vk.com/call/join/test",
+                streamsPerCred = 4,
+                useCarrierDns = true,
+                dnsMode = DnsMode.UDP
+            ),
+            srv = AppPreferences.ServerOpts(wrapEnabled = true, wrapKey = wrapKey),
+            carrierDns = "1.1.1.1:53"
+        )
+
+        assertTrue(args.windowed(2).any { it == listOf("-streams-per-cred", "4") })
+        assertTrue(args.windowed(2).any { it == listOf("-dns-servers", "1.1.1.1:53") })
+        assertTrue(args.windowed(2).any { it == listOf("-dns", DnsMode.UDP) })
+        assertTrue(args.windowed(2).any { it == listOf("-wrap-key", wrapKey) })
     }
 }

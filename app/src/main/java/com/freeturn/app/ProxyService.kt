@@ -15,11 +15,13 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.freeturn.app.data.AppPreferences
-import com.freeturn.app.data.DnsMode
 import com.freeturn.app.domain.ClientCommandBuilder
+import com.freeturn.app.domain.CoreLogcatPolicy
+import com.freeturn.app.domain.NetworkHandoverPolicy
 import com.freeturn.app.domain.server.KCP_FEC_VALUE
 import com.freeturn.app.tunnel.ClientTransportResolver
 import java.io.BufferedReader
@@ -50,6 +52,7 @@ class ProxyService : Service() {
         const val MAX_RESTARTS = 8
         private const val CHANNEL_PROXY = "ProxyChannel"
         private const val CHANNEL_CAPTCHA = "CaptchaChannel"
+        private const val TAG_CORE = "VkTurnCore"
         private const val NOTIF_ID_FG = 1
         private const val NOTIF_ID_CAPTCHA = 2
         // Жёстко привязываемся к строке-объявлению капчи в бинарнике, чтобы
@@ -68,10 +71,10 @@ class ProxyService : Service() {
             Pattern.compile("""\[STREAM (\d+)\] Closed DTLS connection""")
         // VLESS: ядро само пишет агрегированное число активных сессий.
         private val VLESS_ACTIVE_REGEX =
-            Pattern.compile("""\[session \d+\] (?:connected|disconnected) \(active: (\d+)\)""")
+            Pattern.compile("""\[(?:session|bond path) \d+\] (?:connected|disconnected) \(active: (\d+)\)""")
         // VLESS: целевое число сессий приходит в этой строке до первого connected.
         private val VLESS_TOTAL_REGEX =
-            Pattern.compile("""VLESS mode: waiting for sessions to connect \(total: (\d+)\)""")
+            Pattern.compile("""VLESS (?:mode|bond): .*?\(total: (\d+)\)""")
     }
 
     private var wakeLock: PowerManager.WakeLock? = null
@@ -170,61 +173,8 @@ class ProxyService : Service() {
         val transport = ClientTransportResolver.resolve(cfg, serverVlessBond = srv.vlessBond)
 
         val executable = "${applicationInfo.nativeLibraryDir}/libvkturn.so"
-
-        val cmdArgs = mutableListOf<String>()
-
-        if (cfg.isRawMode) {
-            val parts = cfg.rawCommand.trim().split("\\s+".toRegex()).filter { it.isNotEmpty() }
-            cmdArgs.add(executable)
-            cmdArgs.addAll(parts.drop(1))
-        } else {
-            cmdArgs.add(executable)
-            cmdArgs.add("-peer"); cmdArgs.add(cfg.serverAddress)
-
-            cmdArgs.add(if (cfg.vkLink.contains("yandex")) "-yandex-link" else "-vk-link")
-            cmdArgs.add(cfg.vkLink)
-            cmdArgs.add("-listen"); cmdArgs.add(cfg.localPort)
-            if (cfg.threads > 0) { cmdArgs.add("-n"); cmdArgs.add(cfg.threads.toString()) }
-            // -streams-per-cred передаём только если пользователь поменял дефолт.
-            if (cfg.streamsPerCred > 0 && cfg.streamsPerCred != 10) {
-                cmdArgs.add("-streams-per-cred"); cmdArgs.add(cfg.streamsPerCred.toString())
-            }
-            if (transport.vlessMode) cmdArgs.add("-vless")
-            else if (cfg.useUdp) cmdArgs.add("-udp")
-            // VLESS bonding имеет смысл только в VLESS-режиме.
-            if (transport.vlessBond) cmdArgs.add("-vless-bond")
-            // WRAP: тот же ключ, что и у сервера (хранится в EncryptedSharedPreferences).
-            // Без 64-hex ключа флаг не передаём — ядро упадёт.
-            if (srv.wrapEnabled &&
-                srv.wrapKey.length == 64 &&
-                srv.wrapKey.matches(Regex("^[0-9a-fA-F]+$"))
-            ) {
-                cmdArgs.add("-wrap")
-                cmdArgs.add("-wrap-key"); cmdArgs.add(srv.wrapKey)
-            }
-            if (cfg.manualCaptcha) cmdArgs.add("--manual-captcha")
-
-            if (cfg.debugMode) cmdArgs.add("-debug")
-            if (cfg.useCarrierDns) {
-                val dns = activeNetworkDnsServers()
-                if (dns.isNotBlank()) {
-                    cmdArgs.add("-dns-servers"); cmdArgs.add(dns)
-                }
-            }
-            if (cfg.dnsMode == DnsMode.UDP || cfg.dnsMode == DnsMode.DOH) {
-                cmdArgs.add("-dns"); cmdArgs.add(cfg.dnsMode)
-            }
-            if (cfg.forcePort443) { cmdArgs.add("-port"); cmdArgs.add("443") }
-            // Альтернативный TURN-узел: переключает клиент на указанный server-side relay
-            // вместо автоподбора. Адрес задаётся пользователем, флаг работает только при
-            // непустом значении (иначе ядро запустится без -turn и будет автоподбор).
-            if (cfg.magicSwitch) {
-                val turn = cfg.magicTurn.trim()
-                if (turn.isNotEmpty()) {
-                    cmdArgs.add("-turn"); cmdArgs.add(turn)
-                }
-            }
-        }
+        val carrierDns = if (!cfg.isRawMode && cfg.useCarrierDns) activeNetworkDnsServers() else ""
+        val cmdArgs = ClientCommandBuilder.build(executable, cfg, srv, carrierDns)
 
         var exitCode = -1
         val startedAt = System.currentTimeMillis()
@@ -303,6 +253,9 @@ class ProxyService : Service() {
                     if (line == null) break
                     val l = line
                     ProxyServiceState.addLog(l)
+                    CoreLogcatPolicy.sanitizeForLogcat(l)?.let { safeLine ->
+                        Log.i(TAG_CORE, safeLine)
+                    }
 
                     // Детекция URL ручной капчи. Каждый раз выдаём новый sessionId,
                     // чтобы диалог пересоздавал WebView, даже если URL не поменялся
@@ -494,6 +447,15 @@ class ProxyService : Service() {
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val cb = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
+                val capabilities = cm.getNetworkCapabilities(network)
+                val shouldRestart = NetworkHandoverPolicy.shouldRestartForNetwork(
+                    hasInternet = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true,
+                    isVpn = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+                )
+                if (!shouldRestart) {
+                    ProxyServiceState.addLog("=== СМЕНА СЕТИ: VPN/служебная сеть, proxy не перезапускается ===")
+                    return
+                }
                 if (!networkInitialized) {
                     networkInitialized = true
                     return

@@ -1,6 +1,5 @@
 package com.freeturn.app.tunnel
 
-import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -22,6 +21,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.freeturn.app.MainActivity
+import com.freeturn.app.domain.NetworkHandoverPolicy
 import io.nekohasekai.libbox.CommandServer
 import io.nekohasekai.libbox.CommandServerHandler
 import io.nekohasekai.libbox.ConnectionOwner
@@ -38,6 +38,7 @@ import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.libbox.SystemProxyStatus
 import io.nekohasekai.libbox.TunOptions
 import io.nekohasekai.libbox.WIFIState
+import java.io.File
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -85,6 +86,9 @@ class FullTunnelVpnService : VpnService(), PlatformInterface, CommandServerHandl
             ACTION_STOP -> serviceScope.launch { stopCoreAndSelf() }
             ACTION_START -> {
                 val configJson = intent.getStringExtra(EXTRA_CONFIG_JSON)
+                    ?: intent.getStringExtra(EXTRA_CONFIG_PATH)?.let { path ->
+                        File(path).takeIf { it.isFile }?.readText()
+                    }
                 if (configJson.isNullOrBlank()) {
                     failAndStop("Full tunnel config is empty")
                 } else {
@@ -342,6 +346,7 @@ class FullTunnelVpnService : VpnService(), PlatformInterface, CommandServerHandl
         for (network in connectivity.allNetworks) {
             val properties = connectivity.getLinkProperties(network) ?: continue
             val capabilities = connectivity.getNetworkCapabilities(network) ?: continue
+            if (!capabilities.isFullTunnelOutboundNetwork()) continue
             val name = properties.interfaceName ?: continue
             val javaInterface = javaInterfaces.firstOrNull { it.name == name } ?: continue
 
@@ -369,17 +374,25 @@ class FullTunnelVpnService : VpnService(), PlatformInterface, CommandServerHandl
         val connectivity = getSystemService(ConnectivityManager::class.java)
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                updateDefaultInterface(listener, network)
-                commandServer?.resetNetwork()
+                val outboundNetwork = connectivity.findFullTunnelOutboundNetwork(network) ?: return
+                updateDefaultInterface(listener, outboundNetwork)
+                if (connectivity.isFullTunnelOutboundNetwork(network)) {
+                    commandServer?.resetNetwork()
+                }
             }
 
             override fun onLost(network: Network) {
-                commandServer?.resetNetwork()
+                if (connectivity.isFullTunnelOutboundNetwork(network)) {
+                    commandServer?.resetNetwork()
+                }
+                connectivity.findFullTunnelOutboundNetwork()?.let {
+                    updateDefaultInterface(listener, it)
+                }
             }
         }
         interfaceCallbacks[listener] = callback
         connectivity.registerDefaultNetworkCallback(callback)
-        connectivity.activeNetwork?.let { updateDefaultInterface(listener, it) }
+        connectivity.findFullTunnelOutboundNetwork()?.let { updateDefaultInterface(listener, it) }
     }
 
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener) {
@@ -394,9 +407,10 @@ class FullTunnelVpnService : VpnService(), PlatformInterface, CommandServerHandl
         val properties = connectivity.getLinkProperties(network) ?: return
         val name = properties.interfaceName ?: return
         val javaInterface = NetworkInterface.getByName(name) ?: return
-        val capabilities = connectivity.getNetworkCapabilities(network)
-        val isWifi = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
-        val isMetered = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) != true
+        val capabilities = connectivity.getNetworkCapabilities(network) ?: return
+        if (!capabilities.isFullTunnelOutboundNetwork()) return
+        val isWifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        val isMetered = !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
         listener.updateDefaultInterface(name, javaInterface.index, isWifi, isMetered)
     }
 
@@ -512,15 +526,23 @@ class FullTunnelVpnService : VpnService(), PlatformInterface, CommandServerHandl
         if (isLoopback) dumpFlags = dumpFlags or OsConstants.IFF_LOOPBACK
         if (isPointToPoint) dumpFlags = dumpFlags or OsConstants.IFF_POINTOPOINT
         if (supportsMulticast()) dumpFlags = dumpFlags or OsConstants.IFF_MULTICAST
-        return runCatching { reflectedFlags }.getOrDefault(dumpFlags)
+        return dumpFlags
     }
 
-    private val NetworkInterface.reflectedFlags: Int
-        @SuppressLint("SoonBlockedPrivateApi")
-        get() {
-            val method = NetworkInterface::class.java.getDeclaredMethod("getFlags")
-            return method.invoke(this) as Int
-        }
+    private fun ConnectivityManager.findFullTunnelOutboundNetwork(preferred: Network? = null): Network? {
+        if (preferred != null && isFullTunnelOutboundNetwork(preferred)) return preferred
+        activeNetwork?.takeIf { isFullTunnelOutboundNetwork(it) }?.let { return it }
+        return allNetworks.firstOrNull { isFullTunnelOutboundNetwork(it) }
+    }
+
+    private fun ConnectivityManager.isFullTunnelOutboundNetwork(network: Network): Boolean =
+        getNetworkCapabilities(network)?.isFullTunnelOutboundNetwork() == true
+
+    private fun NetworkCapabilities.isFullTunnelOutboundNetwork(): Boolean =
+        NetworkHandoverPolicy.shouldUseForFullTunnelOutbound(
+            hasInternet = hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
+            isVpn = hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+        )
 
     companion object {
         private const val TAG = "FullTunnelVpnService"
@@ -529,6 +551,7 @@ class FullTunnelVpnService : VpnService(), PlatformInterface, CommandServerHandl
         private const val ACTION_START = "com.freeturn.app.tunnel.START"
         private const val ACTION_STOP = "com.freeturn.app.tunnel.STOP"
         private const val EXTRA_CONFIG_JSON = "config_json"
+        private const val EXTRA_CONFIG_PATH = "config_path"
 
         private val libboxSetup = AtomicBoolean(false)
 
