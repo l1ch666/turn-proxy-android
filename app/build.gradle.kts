@@ -11,8 +11,8 @@ android {
         applicationId = "com.freeturn.app"
         minSdk = 23
         targetSdk = 36
-        versionCode = 26
-        versionName = "2.6.1"
+        versionCode = 27
+        versionName = "2.6.2"
     }
 
     packaging {
