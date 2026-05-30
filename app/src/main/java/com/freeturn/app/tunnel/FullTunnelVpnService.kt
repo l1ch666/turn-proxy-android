@@ -485,12 +485,19 @@ class FullTunnelVpnService : VpnService(), PlatformInterface, CommandServerHandl
             .setContentIntent(openAppIntent)
             .build()
 
-    class StringArray(private val iterator: Iterator<String>) : StringIterator {
-        override fun len(): Int = 0
+    class StringArray(iterator: Iterator<String>) : StringIterator {
+        // Buffer the iterator so len() reports the real size. libbox uses len()
+        // for some collections (package rules, DNS servers, certificates); a
+        // hardcoded 0 made those appear empty and could break self-exclusion,
+        // DNS and certificate handling in the tunnel.
+        private val items: List<String> = iterator.asSequence().toList()
+        private val cursor = items.iterator()
 
-        override fun hasNext(): Boolean = iterator.hasNext()
+        override fun len(): Int = items.size
 
-        override fun next(): String = iterator.next()
+        override fun hasNext(): Boolean = cursor.hasNext()
+
+        override fun next(): String = cursor.next()
     }
 
     private class InterfaceArray(private val iterator: Iterator<BoxNetworkInterface>) :

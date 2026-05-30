@@ -22,11 +22,11 @@ object SingBoxConfigFactory {
         val root = JSONObject()
             .put("log", JSONObject().put("level", "warn").put("timestamp", true))
             .put("dns", dnsConfig())
-            .put("inbounds", JSONArray().put(tunInbound()))
+            .put("inbounds", JSONArray().put(tunInbound(config.tunMtu)))
             .put(
                 "outbounds",
                 JSONArray()
-                    .put(outboundFor(uri))
+                    .put(outboundFor(uri, config))
                     .put(JSONObject().put("type", "direct").put("tag", "direct"))
             )
             .put("route", routeConfig())
@@ -34,7 +34,7 @@ object SingBoxConfigFactory {
         return root.toString()
     }
 
-    private fun tunInbound(): JSONObject =
+    private fun tunInbound(mtu: Int): JSONObject =
         JSONObject()
             .put("type", "tun")
             .put("tag", "tun-in")
@@ -52,7 +52,7 @@ object SingBoxConfigFactory {
                     .put("126.0.0.0/8")
                     .put("128.0.0.0/1")
             )
-            .put("mtu", 1400)
+            .put("mtu", mtu)
             .put("auto_route", true)
             .put("strict_route", true)
             .put("stack", "system")
@@ -86,23 +86,28 @@ object SingBoxConfigFactory {
             .put("override_android_vpn", false)
             .put("final", "proxy")
 
-    private fun outboundFor(uri: URI): JSONObject {
+    // The outbound ALWAYS connects to the local vk-turn core (localProxyHost/Port),
+    // never to the URI's host:port. The URI carries only the credentials/TLS/
+    // transport that terminate at the real VPS server (which the core forwards to
+    // through TURN). Using the URI host directly would send all traffic straight to
+    // the VPS, bypassing TURN obfuscation entirely (a privacy/circumvention leak).
+    private fun outboundFor(uri: URI, config: FullTunnelConfig): JSONObject {
         val scheme = uri.scheme.orEmpty().lowercase()
         return when (scheme) {
-            "vless" -> vlessOutbound(uri)
-            "hysteria2", "hy2" -> hysteria2Outbound(uri)
-            "hysteria" -> hysteriaOutbound(uri)
+            "vless" -> vlessOutbound(uri, config)
+            "hysteria2", "hy2" -> hysteria2Outbound(uri, config)
+            "hysteria" -> hysteriaOutbound(uri, config)
             else -> error("Unsupported full tunnel URI scheme: $scheme")
         }
     }
 
-    private fun vlessOutbound(uri: URI): JSONObject {
+    private fun vlessOutbound(uri: URI, config: FullTunnelConfig): JSONObject {
         val params = uri.queryParams()
         val outbound = JSONObject()
             .put("type", "vless")
             .put("tag", "proxy")
-            .put("server", uri.host)
-            .put("server_port", uri.port)
+            .put("server", config.localProxyHost)
+            .put("server_port", config.localProxyPort)
             .put("uuid", uri.decodedUserInfo().substringBefore(':'))
 
         params.firstValue("flow")?.takeIf { it.isNotBlank() }?.let { outbound.put("flow", it) }
@@ -123,13 +128,13 @@ object SingBoxConfigFactory {
         return outbound
     }
 
-    private fun hysteria2Outbound(uri: URI): JSONObject {
+    private fun hysteria2Outbound(uri: URI, config: FullTunnelConfig): JSONObject {
         val params = uri.queryParams()
         val outbound = JSONObject()
             .put("type", "hysteria2")
             .put("tag", "proxy")
-            .put("server", uri.host)
-            .put("server_port", uri.port)
+            .put("server", config.localProxyHost)
+            .put("server_port", config.localProxyPort)
             .put("password", params.firstValue("password", "auth") ?: uri.decodedUserInfo())
             .put("tls", tlsConfig(params, "tls", forceEnabled = true))
 
@@ -143,13 +148,13 @@ object SingBoxConfigFactory {
         return outbound
     }
 
-    private fun hysteriaOutbound(uri: URI): JSONObject {
+    private fun hysteriaOutbound(uri: URI, config: FullTunnelConfig): JSONObject {
         val params = uri.queryParams()
         val outbound = JSONObject()
             .put("type", "hysteria")
             .put("tag", "proxy")
-            .put("server", uri.host)
-            .put("server_port", uri.port)
+            .put("server", config.localProxyHost)
+            .put("server_port", config.localProxyPort)
             .put("up_mbps", params.firstInt("upmbps", "up_mbps") ?: 100)
             .put("down_mbps", params.firstInt("downmbps", "down_mbps") ?: 100)
             .put("tls", tlsConfig(params, "tls", forceEnabled = true))

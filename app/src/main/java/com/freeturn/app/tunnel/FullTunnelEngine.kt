@@ -12,7 +12,11 @@ data class FullTunnelConfig(
     val clientUri: String,
     val localProxyHost: String,
     val localProxyPort: Int,
-    val excludeOwnAppFromVpn: Boolean = true
+    val excludeOwnAppFromVpn: Boolean = true,
+    // TUN (inner) MTU. 1280 is the conservative default that avoids outer-path
+    // fragmentation given the VLESS+smux+KCP+DTLS+TURN overhead. Raise toward
+    // ~1340 if your path allows for slightly higher throughput. See docs/TUNING.md.
+    val tunMtu: Int = 1280
 )
 
 sealed class FullTunnelState {
