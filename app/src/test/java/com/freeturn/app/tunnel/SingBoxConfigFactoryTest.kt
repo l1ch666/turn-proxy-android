@@ -12,9 +12,12 @@ class SingBoxConfigFactoryTest {
         val json = JSONObject(
             SingBoxConfigFactory.build(
                 FullTunnelConfig(
-                    clientUri = "vless://00000000-0000-0000-0000-000000000000@127.0.0.1:9000?security=tls&sni=example.com&type=ws&path=/ray&host=cdn.example.com",
+                    // URI host:port is a remote VPS on purpose: the outbound must
+                    // still target the LOCAL core, not the VPS (TURN-bypass guard).
+                    clientUri = "vless://00000000-0000-0000-0000-000000000000@vps.example.com:8443?security=tls&sni=example.com&type=ws&path=/ray&host=cdn.example.com",
                     localProxyHost = "127.0.0.1",
-                    localProxyPort = 9000
+                    localProxyPort = 9000,
+                    tunMtu = 1280
                 )
             )
         )
@@ -23,6 +26,7 @@ class SingBoxConfigFactoryTest {
         val outbound = json.getJSONArray("outbounds").getJSONObject(0)
 
         assertEquals("tun", inbound.getString("type"))
+        assertEquals(1280, inbound.getInt("mtu"))
         assertEquals("172.19.0.1/30", inbound.getJSONArray("address").getString(0))
         assertEquals("0.0.0.0/2", inbound.getJSONArray("route_address").getString(0))
         assertEquals(false, inbound.has("route_exclude_address"))
@@ -32,6 +36,8 @@ class SingBoxConfigFactoryTest {
         assertEquals(false, inbound.has("inet6_route_address"))
         assertEquals("vless", outbound.getString("type"))
         assertEquals("proxy", outbound.getString("tag"))
+        // Must point at the LOCAL core, NOT the URI host — otherwise traffic
+        // bypasses the TURN tunnel and goes straight to the VPS.
         assertEquals("127.0.0.1", outbound.getString("server"))
         assertEquals(9000, outbound.getInt("server_port"))
         assertEquals("example.com", outbound.getJSONObject("tls").getString("server_name"))
@@ -110,7 +116,7 @@ class SingBoxConfigFactoryTest {
         val json = JSONObject(
             SingBoxConfigFactory.build(
                 FullTunnelConfig(
-                    clientUri = "hy2://secret@127.0.0.1:9000?sni=example.com&obfs=salamander&obfs-password=mask",
+                    clientUri = "hy2://secret@vps.example.com:8443?sni=example.com&obfs=salamander&obfs-password=mask",
                     localProxyHost = "127.0.0.1",
                     localProxyPort = 9000
                 )
@@ -120,6 +126,7 @@ class SingBoxConfigFactoryTest {
         val outbound = json.getJSONArray("outbounds").getJSONObject(0)
 
         assertEquals("hysteria2", outbound.getString("type"))
+        // Local core, not the VPS URI host.
         assertEquals("127.0.0.1", outbound.getString("server"))
         assertEquals(9000, outbound.getInt("server_port"))
         assertEquals("secret", outbound.getString("password"))

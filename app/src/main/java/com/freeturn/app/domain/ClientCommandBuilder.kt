@@ -49,7 +49,12 @@ object ClientCommandBuilder {
             cmdArgs.add("-wrap-key")
             cmdArgs.add(srv.wrapKey)
         }
-        if (cfg.manualCaptcha) cmdArgs.add("--manual-captcha")
+        // VK's captchaNotRobot auto-solve is dead server-side (anti-bot validates
+        // signals only a real browser engine produces). The in-app WebView
+        // auto-solver handles captchas now, so always run the core in manual mode:
+        // it skips the doomed auto attempts (which only waste time and flag the IP)
+        // and immediately serves the captcha proxy that the WebView drives.
+        cmdArgs.add("--manual-captcha")
 
         if (cfg.debugMode) cmdArgs.add("-debug")
         if (cfg.useCarrierDns && carrierDns.isNotBlank()) {

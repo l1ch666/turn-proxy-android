@@ -70,9 +70,9 @@
     <string name="streams_per_cred_format">Потоков на аккаунт: %1$d</string>
 
     <string name="client_vless_bond">VLESS bonding</string>
-    <string name="client_vless_bond_desc">VLESS only: packet-level bonding for one full-tunnel TCP connection across several TURN/DTLS paths. The server must run with -vless -vless-bond.</string>
+    <string name="client_vless_bond_desc">Экспериментально (по умолчанию ВЫКЛ). VLESS only: packet-level bonding одного TCP-соединения по нескольким TURN/DTLS-путям. Обычно МЕДЛЕННЕЕ обычного многосессионного режима (HoL между путями) — включайте только для экспериментов. Сервер должен быть запущен с -vless -vless-bond.</string>
     <string name="client_wrap_enabled">WRAP-обфускация</string>
-    <string name="client_wrap_desc">Должна совпадать с настройкой сервера. Ключ берётся с сервера.</string>
+    <string name="client_wrap_desc">Пока не реализовано в ядре (флаги принимаются без эффекта). Должна совпадать с настройкой сервера; ключ берётся с сервера.</string>
     <string name="locked_disconnect_hint">Подключитесь к серверу, чтобы изменить</string>
     <string name="wrap_key_empty_hint">Ключ не сгенерирован — нажмите кнопку ниже</string>
     <string name="wrap_key_invalid_hint">Неверный формат — нужны 64 hex-символа</string>
@@ -97,10 +97,10 @@
     <string name="use_carrier_dns">DNS оператора связи</string>
     <string name="use_carrier_dns_desc">Использовать DNS текущей сети вместо системного резолвера</string>
     <string name="dns_mode_title">DNS-резолвер</string>
-    <string name="dns_mode_desc">Авто — пробует системный DNS, переключается на DNS-over-HTTPS при блокировке</string>
+    <string name="dns_mode_desc">Авто и UDP/53 работают. DoH пока не реализован в ядре — при выборе используется обычный UDP-резолвер.</string>
     <string name="dns_mode_auto">Авто</string>
     <string name="dns_mode_udp">UDP/53</string>
-    <string name="dns_mode_doh">DoH</string>
+    <string name="dns_mode_doh">DoH (не реализовано)</string>
     <string name="force_port_443">TURN на порту 443</string>
     <string name="force_port_443_desc">Помогает, если оператор режет нестандартные порты</string>
     <string name="finish_setup">Завершить настройку</string>
@@ -131,9 +131,9 @@
     <string name="server_install_downloaded">Обновлено</string>
     <string name="server_version_label">Версия: %1$s</string>
     <string name="server_vless_bond">VLESS bonding</string>
-    <string name="server_vless_bond_desc">Packet-level VLESS bonding across several TURN/DTLS paths</string>
+    <string name="server_vless_bond_desc">Экспериментально (по умолчанию ВЫКЛ). Packet-level VLESS bonding по нескольким TURN/DTLS-путям. Обычно медленнее обычного многосессионного режима — для экспериментов.</string>
     <string name="server_wrap_enabled">WRAP-обфускация</string>
-    <string name="server_wrap_desc">Маскирует DTLS-трафик ChaCha20-XOR (одинаковый ключ на сервере и клиенте)</string>
+    <string name="server_wrap_desc">Пока не реализовано в ядре: флаги принимаются, но обфускации нет. Включение не даёт эффекта (зарезервировано на будущее).</string>
     <string name="server_wrap_key_label">Wrap-ключ (64 hex)</string>
     <string name="server_wrap_regen">Сгенерировать новый ключ на сервере</string>
     <string name="start_server">Запустить сервер</string>
