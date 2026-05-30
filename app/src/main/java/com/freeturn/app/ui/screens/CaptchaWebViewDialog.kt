@@ -6,6 +6,7 @@
 package com.freeturn.app.ui.screens
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
@@ -16,15 +17,13 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -149,7 +148,72 @@ private fun dispatchRealTap(webView: WebView, x: Float, y: Float, handler: Handl
 
 private enum class CaptchaPhase { AUTO, MANUAL }
 
+// Builds the captcha WebView with the auto-solve wiring (JS finder + real-gesture
+// tap). Shared by the hidden auto phase and the visible manual phase.
 @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
+private fun buildCaptchaWebView(
+    ctx: Context,
+    mainHandler: Handler,
+    webViewRef: MutableState<WebView?>,
+    tapsLeft: MutableState<Int>,
+    captchaUrl: String,
+    onLoadingChange: (Boolean) -> Unit
+): WebView = WebView(ctx).apply {
+    layoutParams = ViewGroup.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.MATCH_PARENT
+    )
+    settings.apply {
+        javaScriptEnabled = true
+        domStorageEnabled = true
+        useWideViewPort = true
+        loadWithOverviewMode = true
+        setSupportZoom(true)
+        builtInZoomControls = true
+        displayZoomControls = false
+        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
+    }
+    val bridge = CaptchaAutomationBridge { fx, fy, found, info ->
+        mainHandler.post {
+            val wv = webViewRef.value ?: return@post
+            val w = wv.width
+            val h = wv.height
+            if (w <= 0 || h <= 0) return@post
+            val x = fx.coerceIn(0f, 1f) * w
+            val y = fy.coerceIn(0f, 1f) * h
+            ProxyServiceState.addLog(
+                "[Auto-Captcha] target found=$found @${"%.2f".format(fx)},${"%.2f".format(fy)} | $info"
+            )
+            dispatchRealTap(wv, x, y, mainHandler)
+        }
+    }
+    addJavascriptInterface(bridge, "AndroidCaptchaAuto")
+    webViewClient = object : WebViewClient() {
+        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            super.onPageStarted(view, url, favicon)
+            onLoadingChange(true)
+        }
+
+        override fun onPageFinished(view: WebView?, url: String?) {
+            super.onPageFinished(view, url)
+            onLoadingChange(false)
+            // Give VK's widget JS time to render, then locate + tap the checkbox.
+            // A second pass covers late-rendered widgets / a needed second nudge.
+            val attempt = Runnable {
+                if (tapsLeft.value > 0) {
+                    tapsLeft.value -= 1
+                    view?.evaluateJavascript(CAPTCHA_FINDER_JS, null)
+                }
+            }
+            mainHandler.postDelayed(attempt, 1600)
+            mainHandler.postDelayed(attempt, 5200)
+        }
+    }
+    webViewRef.value = this
+    loadUrl(captchaUrl)
+}
+
 @Composable
 fun CaptchaWebViewDialog(
     captchaUrl: String,
@@ -162,125 +226,57 @@ fun CaptchaWebViewDialog(
     // Limit auto-tap attempts so we never spam VK; manual solving stays available.
     val tapsLeft = remember { mutableStateOf(2) }
 
-    // The auto attempt runs hidden behind a spinner. On success the core clears the
-    // captcha session and this dialog is removed externally. If we're still here
-    // after the window, reveal the page for manual solving.
+    // The auto attempt runs fully hidden (off-screen, no dialog, no spinner) so the
+    // captcha never flashes to the user. On success the core clears the captcha
+    // session and this whole composable is removed externally. If it is still here
+    // after the window, the auto attempt failed (or a slider appeared) — only then
+    // do we open the visible page for manual solving.
     LaunchedEffect(captchaUrl) {
         delay(12_000)
         phase = CaptchaPhase.MANUAL
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            dismissOnBackPress = phase == CaptchaPhase.MANUAL,
-            dismissOnClickOutside = false
-        )
-    ) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-            Box(modifier = Modifier.fillMaxSize()) {
+    when (phase) {
+        CaptchaPhase.AUTO -> {
+            // Zero-size, non-blocking host: the WebView is measured at a realistic
+            // size (so VK's JS renders the checkbox and the tap lands) but drawn far
+            // off-screen, so nothing is shown and the app stays fully interactive.
+            Box(modifier = Modifier.size(0.dp)) {
                 AndroidView(
                     factory = { ctx ->
-                        WebView(ctx).apply {
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-
-                            settings.apply {
-                                javaScriptEnabled = true
-                                domStorageEnabled = true
-                                useWideViewPort = true
-                                loadWithOverviewMode = true
-                                setSupportZoom(true)
-                                builtInZoomControls = true
-                                displayZoomControls = false
-                                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                                userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
-                            }
-
-                            val bridge = CaptchaAutomationBridge { fx, fy, found, info ->
-                                mainHandler.post {
-                                    val wv = webViewRef.value ?: return@post
-                                    val w = wv.width
-                                    val h = wv.height
-                                    if (w <= 0 || h <= 0) return@post
-                                    val x = fx.coerceIn(0f, 1f) * w
-                                    val y = fy.coerceIn(0f, 1f) * h
-                                    ProxyServiceState.addLog(
-                                        "[Auto-Captcha] target found=$found @${"%.2f".format(fx)},${"%.2f".format(fy)} | $info"
-                                    )
-                                    dispatchRealTap(wv, x, y, mainHandler)
-                                }
-                            }
-                            addJavascriptInterface(bridge, "AndroidCaptchaAuto")
-
-                            webViewClient = object : WebViewClient() {
-                                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                    super.onPageStarted(view, url, favicon)
-                                    isLoading = true
-                                }
-
-                                override fun onPageFinished(view: WebView?, url: String?) {
-                                    super.onPageFinished(view, url)
-                                    isLoading = false
-                                    // Give VK's widget JS time to render, then try to
-                                    // locate + tap the checkbox. A second pass covers
-                                    // late-rendered widgets / a needed second nudge.
-                                    val attempt = Runnable {
-                                        if (tapsLeft.value > 0) {
-                                            tapsLeft.value -= 1
-                                            view?.evaluateJavascript(CAPTCHA_FINDER_JS, null)
-                                        }
-                                    }
-                                    mainHandler.postDelayed(attempt, 1600)
-                                    mainHandler.postDelayed(attempt, 5200)
-                                }
-                            }
-
-                            webViewRef.value = this
-                            loadUrl(captchaUrl)
+                        buildCaptchaWebView(ctx, mainHandler, webViewRef, tapsLeft, captchaUrl) {
+                            isLoading = it
                         }
                     },
-                    // Keep the WebView laid out and rendering at full size during AUTO
-                    // (so VK's JS runs and the tap lands), but invisible — the spinner
-                    // below covers it so the captcha page never flashes to the user.
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = if (phase == CaptchaPhase.MANUAL) 56.dp else 0.dp)
-                        .graphicsLayer { alpha = if (phase == CaptchaPhase.AUTO) 0f else 1f }
+                        .requiredSize(360.dp, 720.dp)
+                        .graphicsLayer { translationX = 10_000f }
                 )
+            }
+        }
 
-                when (phase) {
-                    CaptchaPhase.AUTO -> {
-                        Column(
+        CaptchaPhase.MANUAL -> {
+            Dialog(
+                onDismissRequest = onDismiss,
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = false
+                )
+            ) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        AndroidView(
+                            factory = { ctx ->
+                                buildCaptchaWebView(ctx, mainHandler, webViewRef, tapsLeft, captchaUrl) {
+                                    isLoading = it
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.surface)
-                                .padding(32.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularWavyProgressIndicator()
-                            Spacer(Modifier.height(20.dp))
-                            Text(
-                                stringResource(R.string.captcha_auto_solving),
-                                style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                stringResource(R.string.captcha_auto_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
+                                .padding(top = 56.dp)
+                        )
 
-                    CaptchaPhase.MANUAL -> {
-                        // Thin top bar with title + close, over the now-visible captcha.
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()

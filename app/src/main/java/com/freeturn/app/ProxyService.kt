@@ -55,6 +55,13 @@ class ProxyService : Service() {
         private const val TAG_CORE = "VkTurnCore"
         private const val NOTIF_ID_FG = 1
         private const val NOTIF_ID_CAPTCHA = 2
+        // В норме капчу за пару секунд решает фоновый WebView-авторешатель, и
+        // диалог/уведомление пользователю не нужны. Уведомление о ручной капче
+        // показываем с задержкой и отменяем, если капча-сессия закроется раньше
+        // (авто-успех). Так уведомление и полноэкранный режим всплывают только
+        // когда действительно требуется ручное вмешательство (авто не справилось
+        // или приложение свёрнуто всё это время).
+        private const val CAPTCHA_NOTIF_DELAY_MS = 13_000L
         // Жёстко привязываемся к строке-объявлению капчи в бинарнике, чтобы
         // случайные localhost-URL в других логах не открывали диалог.
         // Новое ядро (manual_captcha.go) пишет "manually open this URL: <url>".
@@ -90,6 +97,9 @@ class ProxyService : Service() {
     @Volatile private var networkDebounceJob: kotlinx.coroutines.Job? = null
     private val restartCount = AtomicInteger(0)
     @Volatile private var captchaNotificationActive = false
+    // Posted with a delay on captcha detection; removed if the captcha session
+    // clears first (the background WebView auto-solver succeeded).
+    private val showCaptchaNotifRunnable = Runnable { showCaptchaNotification() }
 
     private lateinit var prefs: AppPreferences
     private lateinit var serviceScope: CoroutineScope
@@ -267,12 +277,14 @@ class ProxyService : Service() {
                         ProxyServiceState.setCaptchaSession(
                             CaptchaSession(url, captchaSessionCounter)
                         )
-                        // Показываем нотификацию только если предыдущая капча уже закрыта.
-                        // Бинарник может выдать несколько URL подряд за одну авторизацию —
-                        // не плодим спам.
+                        // НЕ показываем уведомление сразу: сперва капчу пытается
+                        // решить фоновый WebView-авторешатель. Планируем уведомление
+                        // с задержкой; если капча-сессия закроется раньше (авто-успех)
+                        // — оно отменится в cancelCaptchaNotification().
                         if (!captchaNotificationActive) {
-                            showCaptchaNotification()
                             captchaNotificationActive = true
+                            handler.removeCallbacks(showCaptchaNotifRunnable)
+                            handler.postDelayed(showCaptchaNotifRunnable, CAPTCHA_NOTIF_DELAY_MS)
                         }
                     }
 
@@ -517,6 +529,7 @@ class ProxyService : Service() {
     }
 
     private fun cancelCaptchaNotification() {
+        handler.removeCallbacks(showCaptchaNotifRunnable)
         NotificationManagerCompat.from(this).cancel(NOTIF_ID_CAPTCHA)
         captchaNotificationActive = false
     }

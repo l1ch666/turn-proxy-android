@@ -70,7 +70,7 @@
     <string name="streams_per_cred_format">Потоков на аккаунт: %1$d</string>
 
     <string name="client_vless_bond">VLESS bonding</string>
-    <string name="client_vless_bond_desc">VLESS only: packet-level bonding for one full-tunnel TCP connection across several TURN/DTLS paths. The server must run with -vless -vless-bond.</string>
+    <string name="client_vless_bond_desc">Экспериментально (по умолчанию ВЫКЛ). VLESS only: packet-level bonding одного TCP-соединения по нескольким TURN/DTLS-путям. Обычно МЕДЛЕННЕЕ обычного многосессионного режима (HoL между путями) — включайте только для экспериментов. Сервер должен быть запущен с -vless -vless-bond.</string>
     <string name="client_wrap_enabled">WRAP-обфускация</string>
     <string name="client_wrap_desc">Должна совпадать с настройкой сервера. Ключ берётся с сервера.</string>
     <string name="locked_disconnect_hint">Подключитесь к серверу, чтобы изменить</string>
@@ -131,7 +131,7 @@
     <string name="server_install_downloaded">Обновлено</string>
     <string name="server_version_label">Версия: %1$s</string>
     <string name="server_vless_bond">VLESS bonding</string>
-    <string name="server_vless_bond_desc">Packet-level VLESS bonding across several TURN/DTLS paths</string>
+    <string name="server_vless_bond_desc">Экспериментально (по умолчанию ВЫКЛ). Packet-level VLESS bonding по нескольким TURN/DTLS-путям. Обычно медленнее обычного многосессионного режима — для экспериментов.</string>
     <string name="server_wrap_enabled">WRAP-обфускация</string>
     <string name="server_wrap_desc">Маскирует DTLS-трафик ChaCha20-XOR (одинаковый ключ на сервере и клиенте)</string>
     <string name="server_wrap_key_label">Wrap-ключ (64 hex)</string>
@@ -216,8 +216,6 @@
     <string name="captcha_title">Проверка VK</string>
     <string name="captcha_subtitle">Пройдите проверку для продолжения</string>
     <string name="captcha_close">Закрыть</string>
-    <string name="captcha_auto_solving">Автопроверка капчи…</string>
-    <string name="captcha_auto_hint">Если не удастся автоматически — откроется ручной режим</string>
 
     <!-- Telegram -->
     <string name="tg_channel">Telegram-канал</string>
