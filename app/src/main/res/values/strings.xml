@@ -216,6 +216,8 @@
     <string name="captcha_title">Проверка VK</string>
     <string name="captcha_subtitle">Пройдите проверку для продолжения</string>
     <string name="captcha_close">Закрыть</string>
+    <string name="captcha_auto_solving">Автопроверка капчи…</string>
+    <string name="captcha_auto_hint">Если не удастся автоматически — откроется ручной режим</string>
 
     <!-- Telegram -->
     <string name="tg_channel">Telegram-канал</string>
